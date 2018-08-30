@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>trackdiff test 2</title>
+    <!-- <style type="text/css">
+        table{
+            width: 100%;
+        }
+        td {
+            padding-right: 2em;
+        }
+        span {
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style> -->
+    <link rel="stylesheet" href="../dep/bootstrap.min.css">
+
+</head>
+<body>
+
+<script src="..\dep\jquery-3.2.1.min.js"></script>
+
+<script src="..\dep\difftrack\text-diff.js"></script>
+<script src="..\dep\difftrack\difftrack.js"></script>
+<script src="..\dep\difftrack\diff-ui.js"></script>
+<script src="..\src\mdx.js"></script>
+<script defer>
+
+let colorPalette = [
+    "#aaaaff",
+    "#8888ff",
+    "#fa4aaa",
+    "#f808aa",
+    "#ffffaa",
+    "#ffff88",
+    "#4af8a8",
+    "#888888",
+    "#ff8888",
+    "#88ff88",
+    "#f8c8a8",
+    "#ff88ff",
+    "#88ffff",
+    "#aa48fa",
+    "#f84f4f",
+];
+
+function CommentBlock(root, mdx) {
+    this._root = root;
+
+    let _initialize = function(self){
+    };
+    _initialize(this);
+}
+
+function MdxDebugEditor(root, mdx) {
+    this._root = root;
+    this._mdx = mdx;
+    this._lastText = mdx.text();
+    this._textEditor = null;
+    this._prettyDiffBlock = null;
+    this._commentsPointsBlock = null;
+    this._timeout = null;
+
+    let _keypress = function(self) {
+        if (self._timeout != null) {
+            clearTimeout(self._timeout);
+            self._timeout = null;
+        }
+        self._timeout = setTimeout(()=>{
+            self._updateDiff();
+            self._timeout = null;
+        }, 1000);
+    }
+
+    let _initialize = function(self){
+        let container = $("<div>").addClass('p-4');//.addClass('container');
+        self._root.append(container);
+        let r1 = $("<div>").addClass('row');
+        let r2 = $("<div>").addClass('row');
+        container
+            .append(r2)
+            .append(r1)
+            ;
+        let r1c1 = $("<div>").addClass('col-8');
+        let r1c2 = $("<div>").addClass('col-4');
+        let r2c1 = $("<div>").addClass('col-6');
+        let r2c2 = $("<div>").addClass('col-6');
+        r1
+            .append(r1c1)
+            .append(r1c2)
+            ;
+        r2
+            .append(r2c1)
+            .append(r2c2)
+            ;
+
+        self._textEditor = $("<textarea>");
+        self._textEditor
+            .css('width', '100%')
+            .val(mdx.text())
+            ;
+
+        self._textEditor.keydown((e)=>{_keypress(self);});
+        self._textEditor.keyup((e)=>{_keypress(self);});
+
+        r1c1.append(self._textEditor);
+        // r1c2.append($("<div>").css('width', '100%').text(mdx.text()));
+
+        self._commentsPointsBlock = $("<div>");
+        r2c1.append(self._commentsPointsBlock);
+
+        self._prettyDiffBlock = $("<div>");
+        r2c2.append(self._prettyDiffBlock);
+
+        console.log(self);
+        self._updateDiff();
+    };
+
+    this._updateDiff = function() {
+        console.log('_updateDiff');
+        let newText = this._textEditor.val();
+        this._prettyDiffBlock.empty();
+        this._commentsPointsBlock.empty();
+
+        new SingleDiffBlock(this._prettyDiffBlock, this._lastText, newText);
+
+        let points = [];
+        this._mdx.comments().map(c=>{
+            points.push(c.start);
+            points.push(c.end);
+        });
+        let pointColors = points.map((p, index)=>{return new PointColor(p, colorPalette[index]);});
+        new DiffPointsBlock(this._commentsPointsBlock, this._lastText, newText, pointColors);
+
+        let numLines = newText.split("\n").length;
+        this._textEditor.css('height', (numLines * 1.75) + "rem");
+    }
+
+    _initialize(this);
+}
+
+let testText000 =
+`# Hello World
+This is a _very_ simple markdown document.
+
+It has *almost* no formatting.
+1. however,
+1. we do have this
+1. pointless, numbered
+1. list of items.
+
+Have fun!
+`
+let testComments000 = [
+    {start:{x:2, y:0}, end:{x:6, y:0}, text:"Hello"},
+    {start:{x:0, y:9}, end:{x:3, y:9}, text:"Have"},
+    {start:{x:10, y:1}, end:{x:15, y:1}, text:"_very_"},
+];
+
+window.onload = function() {
+    // test_long_code();
+    // test003();
+    // test002_by_word();
+    // test_apple_tos();
+    // test000_by_word();
+
+
+    let mdx = Mdx.import(testText000, testComments000);
+    mdx.comments().map(comment=>{console.log(comment);});
+    let dbgEditor = new MdxDebugEditor($('body'), mdx);
+};
+</script>
+</body>
+</html>
