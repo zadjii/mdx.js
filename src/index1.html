@@ -57,7 +57,7 @@ function CommentBlock(root, mdx) {
 function MdxDebugEditor(root, mdx) {
     this._root = root;
     this._mdx = mdx;
-    this._lastText = mdx.text();
+    // this._lastText = mdx.text();
     this._textEditor = null;
     this._prettyDiffBlock = null;
     this._commentsPointsBlock = null;
@@ -69,7 +69,7 @@ function MdxDebugEditor(root, mdx) {
             self._timeout = null;
         }
         self._timeout = setTimeout(()=>{
-            self._updateDiff();
+            self._updateDiff(true);
             self._timeout = null;
         }, 1000);
     }
@@ -115,24 +115,28 @@ function MdxDebugEditor(root, mdx) {
         r2c2.append(self._prettyDiffBlock);
 
         console.log(self);
-        self._updateDiff();
+        self._updateDiff(false);
     };
 
-    this._updateDiff = function() {
+    this._updateDiff = function(updateText) {
         console.log('_updateDiff');
         let newText = this._textEditor.val();
+
+        if (updateText)
+            this._mdx.updateText(newText);
+
         this._prettyDiffBlock.empty();
         this._commentsPointsBlock.empty();
 
-        new SingleDiffBlock(this._prettyDiffBlock, this._lastText, newText);
+        new SingleDiffBlock(this._prettyDiffBlock, this._mdx.lastText(), newText);
 
         let points = [];
-        this._mdx.comments().map(c=>{
+        this._mdx.lastComments().map(c=>{
             points.push(c.start);
             points.push(c.end);
         });
         let pointColors = points.map((p, index)=>{return new PointColor(p, colorPalette[index]);});
-        new DiffPointsBlock(this._commentsPointsBlock, this._lastText, newText, pointColors);
+        new DiffPointsBlock(this._commentsPointsBlock, this._mdx.lastText(), newText, pointColors);
 
         let numLines = newText.split("\n").length;
         this._textEditor.css('height', (numLines * 1.75) + "rem");
@@ -141,7 +145,7 @@ function MdxDebugEditor(root, mdx) {
     _initialize(this);
 }
 
-let testText000 =
+let testTextInitial000 =
 `# Hello World
 This is a _very_ simple markdown document.
 
@@ -159,6 +163,23 @@ let testComments000 = [
     {start:{x:10, y:1}, end:{x:15, y:1}, text:"_very_"},
 ];
 
+let testTextFinal000 =
+`# Why Hello There!
+This is a _pretty_ simple markdown document.
+
+It has *almost* no formatting.
+* however,
+* we do have this
+* bulleted, unordered
+* list of items.
+
+Have fun!
+
+## here's another paragraph
+
+You know, for testing and stuff
+`
+
 window.onload = function() {
     // test_long_code();
     // test003();
@@ -167,7 +188,7 @@ window.onload = function() {
     // test000_by_word();
 
 
-    let mdx = Mdx.import(testText000, testComments000);
+    let mdx = Mdx.import(testTextFinal000, testComments000, testTextInitial000);
     mdx.comments().map(comment=>{console.log(comment);});
     let dbgEditor = new MdxDebugEditor($('body'), mdx);
 };
