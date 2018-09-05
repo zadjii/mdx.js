@@ -130,13 +130,23 @@ function MdxDebugEditor(root, mdx) {
 
         new SingleDiffBlock(this._prettyDiffBlock, this._mdx.lastText(), newText);
 
-        let points = [];
-        this._mdx.lastComments().map(c=>{
-            points.push(c.start);
-            points.push(c.end);
+        // let lastPoints = [];
+        // this._mdx.lastComments().map(c=>{
+        //     lastPoints.push(c.start);
+        //     lastPoints.push(c.end);
+        // });
+        // let currPoints = [];
+        // this._mdx.lastComments().map(c=>{
+        //     currPoints.push(c.start);
+        //     currPoints.push(c.end);
+        // });
+        // let lastPointColors = lastPoints.map((p, index)=>{return new PointColor(p, colorPalette[index]);});
+        // let currPointColors = currPoints.map((p, index)=>{return new PointColor(p, colorPalette[index]);});
+        // new DiffPointsBlock(this._commentsPointsBlock, this._mdx.lastText(), newText, lastPointColors);
+        // new DiffPointsBlock(this._commentsPointsBlock, this._mdx.text(), newText, currPointColors);
+        this._mdx.comments().map(c=>{
+            new CommentedTextBlock(this._commentsPointsBlock, newText, c);
         });
-        let pointColors = points.map((p, index)=>{return new PointColor(p, colorPalette[index]);});
-        new DiffPointsBlock(this._commentsPointsBlock, this._mdx.lastText(), newText, pointColors);
 
         let numLines = newText.split("\n").length;
         this._textEditor.css('height', (numLines * 1.75) + "rem");
@@ -157,7 +167,7 @@ It has *almost* no formatting.
 
 Have fun!
 `
-let testComments000 = [
+let testInitialComments000 = [
     {start:{x:2, y:0}, end:{x:6, y:0}, text:"Hello"},
     {start:{x:0, y:9}, end:{x:3, y:9}, text:"Have"},
     {start:{x:10, y:1}, end:{x:15, y:1}, text:"_very_"},
@@ -179,6 +189,11 @@ Have fun!
 
 You know, for testing and stuff
 `
+let testFinalComments000 = [
+    {start:{x:6, y:0}, end:{x:10, y:0}, text:"Hello"},
+    {start:{x:0, y:9}, end:{x:3, y:9}, text:"Have"},
+    {start:{x:10, y:1}, end:{x:17, y:1}, text:"_very_"},
+];
 
 window.onload = function() {
     // test_long_code();
@@ -187,8 +202,8 @@ window.onload = function() {
     // test_apple_tos();
     // test000_by_word();
 
-
-    let mdx = Mdx.import(testTextFinal000, testComments000, testTextInitial000);
+    // The DiffPointsBlock doesn't know how to use the
+    let mdx = Mdx.import(testTextFinal000, testFinalComments000, testTextInitial000);
     mdx.comments().map(comment=>{console.log(comment);});
     let dbgEditor = new MdxDebugEditor($('body'), mdx);
 };

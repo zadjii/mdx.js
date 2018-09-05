@@ -160,6 +160,92 @@ function DiffPointsBlock(root, textA, textB, point_colors) {
     _initialize(this);
 }
 
+function CommentedTextBlock(root, text, comment) {
+    // TODO
+    this._root = root;
+    this._text = text;
+    this._comment = comment;
+    this.highlightColor = "#88aaff";
+    let _initialize = function (self) {
+        let currentHighlight = null;
+        let start = self._comment.start;
+        let end = self._comment.end;
+        console.log({start:start, end:end});
+        // Make the point at least one character wide
+        // if (start.x == end.x && start.y == end.y)
+            end.x++;
+        let nextPoint = start;
+        let lines = self._text.split("\n");
+
+        let addText = function(str){
+            let s = $("<span>").text(str);
+            if (currentHighlight != null) s.css('background', currentHighlight);
+            self._root.append(s);
+        }
+
+        for (var row = 0; row < lines.length; row++) {
+            let line = lines[row];
+            if (nextPoint && row == nextPoint.y) {
+                // Case A: entire comment on this line, start highlight s.x to e.x
+                if (currentHighlight == null && start.y == end.y){
+                    console.log('case A');
+                    let seg0 = line.substring(0, start.x);
+                    let seg1 = line.substring(start.x, end.x);
+                    let seg2 = line.substring(end.x);
+                    addText(seg0);
+                    currentHighlight = self.highlightColor;
+                    addText(seg1);
+                    currentHighlight = null;
+                    addText(seg2);
+                }
+                // Case B: start  highlight on this line at s.x, end on another
+                else if (currentHighlight == null){
+                    console.log('case B');
+                    let seg0 = line.substring(0, start.x);
+                    let seg1 = line.substring(start.x);
+                    addText(seg0);
+                    currentHighlight = self.highlightColor;
+                    addText(seg1);
+                }
+                // start.y == end.y && already started highligting is
+                //      impossible, we'll do the entire line in case A
+                // Case C: started highlighting already, ending highlight at end.x
+                else { // start.y != end.y && already started highligting
+                    console.log('case C');
+                    let seg0 = line.substring(0, end.x);
+                    let seg1 = line.substring(end.x);
+                    addText(seg0);
+                    currentHighlight = null;
+                    addText(seg1);
+                }
+            }
+            else {
+                addText(line);
+            }
+            self._root.append($("<br>"));
+
+        }
+
+
+
+        // for (var i = 0; i < self._diffs.length; i++) {
+        //     let diff = self._diffs[i];
+        //     let lines = diff.value.split('\n');
+        //     lines.map((line, index)=>{
+        //         self._root.append(
+        //             $("<span>")
+        //                 .css("background", diff.added? ("#88ff88") : (diff.removed? ("#ff8888") : ("")))
+        //                 .text(index < lines.length-1? (line + "\u240a") : (line))
+        //         );
+        //         if (index < lines.length-1) self._root.append($("<br>"));
+        //     });
+        // }
+    };
+    _initialize(this);
+}
+
+
+
 function DiffBlock(root, diffs) {
     this._root = root;
     this._diffs = diffs;
