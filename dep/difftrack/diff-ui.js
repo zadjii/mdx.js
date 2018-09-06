@@ -165,11 +165,12 @@ function CommentedTextBlock(root, text, comment) {
     this._root = root;
     this._text = text;
     this._comment = comment;
-    this.highlightColor = "#88aaff";
+    // this.highlightColor = "#88aaff";
+    this.highlightColor = "#ffff00";
     let _initialize = function (self) {
         let currentHighlight = null;
-        let start = self._comment.start;
-        let end = self._comment.end;
+        let start = {x:self._comment.start.x, y:self._comment.start.y};
+        let end = {x:self._comment.end.x, y:self._comment.end.y};
         console.log({start:start, end:end});
         // Make the point at least one character wide
         // if (start.x == end.x && start.y == end.y)

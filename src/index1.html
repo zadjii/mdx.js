@@ -46,10 +46,38 @@ let colorPalette = [
     "#f84f4f",
 ];
 
-function CommentBlock(root, mdx) {
+function CommentBlock(root, comment, editor) {
     this._root = root;
+    this._comment = comment;
+    this._editor = editor;
+    this._baseDiv = null;
+    this._selected = false;
+
+    let _render = function(self){
+        self._baseDiv
+            // .css('border-style', self._selected? "solid"    : "none")
+            .css('border-color', self._selected? "#ffff00"  : "#00000000")
+        ;
+    }
+    this.selected = function(){return this._selected;}
+    this.select = function(){this._selected=true; _render(this);}
+    this.deselect = function(){this._selected=false; _render(this);}
+
+    let _mouseup = function(self) {
+        self._editor.selectNewComment(self);
+    }
 
     let _initialize = function(self){
+        self._baseDiv = $("<div>");
+        self._root.append(self._baseDiv);
+        self._baseDiv
+            .append($("<div>").text(self._comment.text))
+            .append($("<div>").css('font-size', 'small').text(point_to_string(self._comment.start) + ", " + point_to_string(self._comment.end)))
+            .mouseup(()=>{_mouseup(self);})
+            .css('border-width', "1px")
+            .css('border-style', "solid")
+            .css('border-color', "#00000000")
+            ;
     };
     _initialize(this);
 }
@@ -62,6 +90,9 @@ function MdxDebugEditor(root, mdx) {
     this._prettyDiffBlock = null;
     this._commentsPointsBlock = null;
     this._timeout = null;
+    this._selectedComment = -1;
+    this._commentBlocksRoot = null;
+    this._commentBlocks = [];
 
     let _keypress = function(self) {
         if (self._timeout != null) {
@@ -114,19 +145,49 @@ function MdxDebugEditor(root, mdx) {
         self._prettyDiffBlock = $("<div>");
         r2c2.append(self._prettyDiffBlock);
 
-        console.log(self);
         self._updateDiff(false);
-    };
 
+        self._commentBlocksRoot = $("<div>");
+        r1c2.append($("<h3>").text("Comments")).append(self._commentBlocksRoot);
+        self._mdx.comments().map((c, index)=>{
+            self._commentBlocks.push(new CommentBlock(self._commentBlocksRoot, c, self));
+        });
+    };
+    this.selectComment = function(index){
+        if (index > this._mdx.comments().length) index = -1;
+        this._selectedComment = index;
+        this._updateComment();
+    }
+    this.textVal = function() {
+        return this._textEditor.val();
+    }
+    this.selectNewComment = function(comment){
+        this._commentBlocks.map(b=>{b.deselect();});
+        comment.select();
+        this._commentBlocks.map((b, index)=>{
+            if (b.selected()){
+                this._selectedComment = index;
+            }
+        });
+        this._updateComment();
+    }
+    this._updateComment = function() {
+        let newText = this.textVal();
+        this._commentsPointsBlock.empty();
+        if (this._selectedComment >= 0){
+            new CommentedTextBlock(this._commentsPointsBlock, newText, this._mdx.comments()[this._selectedComment]);
+        }
+        else {
+            new CommentedTextBlock(this._commentsPointsBlock, newText, {start:{x:-1,y:-1}, end:{x:-1,y:-1}});
+        }
+    }
     this._updateDiff = function(updateText) {
-        console.log('_updateDiff');
-        let newText = this._textEditor.val();
+        let newText = this.textVal();
 
         if (updateText)
             this._mdx.updateText(newText);
 
         this._prettyDiffBlock.empty();
-        this._commentsPointsBlock.empty();
 
         new SingleDiffBlock(this._prettyDiffBlock, this._mdx.lastText(), newText);
 
@@ -144,9 +205,12 @@ function MdxDebugEditor(root, mdx) {
         // let currPointColors = currPoints.map((p, index)=>{return new PointColor(p, colorPalette[index]);});
         // new DiffPointsBlock(this._commentsPointsBlock, this._mdx.lastText(), newText, lastPointColors);
         // new DiffPointsBlock(this._commentsPointsBlock, this._mdx.text(), newText, currPointColors);
-        this._mdx.comments().map(c=>{
-            new CommentedTextBlock(this._commentsPointsBlock, newText, c);
-        });
+
+        // this._mdx.comments().map(c=>{
+        //     new CommentedTextBlock(this._commentsPointsBlock, newText, c);
+        // });
+
+        this._updateComment();
 
         let numLines = newText.split("\n").length;
         this._textEditor.css('height', (numLines * 1.75) + "rem");
