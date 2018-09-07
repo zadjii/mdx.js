@@ -54,6 +54,7 @@ function CommentBlock(root, comment, editor) {
     this._baseDiv = null;
     this._selected = false;
     this._pointDiv = null;
+    this._textEdit = null;
     this.render = function(){
         this._baseDiv
             .css('border-color', this._selected? "#ffff00"  : "#00000000")
@@ -61,6 +62,7 @@ function CommentBlock(root, comment, editor) {
         this._pointDiv
             .text(point_to_string(this._comment.start) + ", " + point_to_string(this._comment.end))
             ;
+        this._textEdit.val(this._comment.text);
     }
     this.selected = function(){return this._selected;}
     this.select = function(){this._selected=true; this.render();}
@@ -68,7 +70,10 @@ function CommentBlock(root, comment, editor) {
 
     let _mouseup = function(self) {
         self._editor.selectNewComment(self);
-    }
+    };
+    let _keypress = function(self) {
+        self._comment.text = self._textEdit.val();
+    };
 
     let _initialize = function(self){
         self._baseDiv = $("<div>");
@@ -77,8 +82,14 @@ function CommentBlock(root, comment, editor) {
             .css('font-size', 'small')
             .text(point_to_string(self._comment.start) + ", " + point_to_string(self._comment.end))
             ;
+        self._textEdit = $("<input>")
+            .val(self._comment.text)
+            .keydown((e)=>{_keypress(self);})
+            .keyup((e)=>{_keypress(self);})
+            ;
+
         self._baseDiv
-            .append($("<div>").text(self._comment.text))
+            .append(self._textEdit)
             .append(self._pointDiv)
             .mouseup(()=>{_mouseup(self);})
             .css('border-width', "1px")
