@@ -80,7 +80,7 @@ function TextBlock(root, text, point_colors) {
             }
             else {
                 self._root.append($("<span>").text(line));
-                console.log(line);
+                // console.log(line);
             }
             self._root.append($("<br>"));
         }
@@ -171,7 +171,7 @@ function CommentedTextBlock(root, text, comment) {
         let currentHighlight = null;
         let start = {x:self._comment.start.x, y:self._comment.start.y};
         let end = {x:self._comment.end.x, y:self._comment.end.y};
-        console.log({start:start, end:end});
+        // console.log({start:start, end:end});
         // Make the point at least one character wide
         // if (start.x == end.x && start.y == end.y)
             end.x++;
@@ -189,7 +189,7 @@ function CommentedTextBlock(root, text, comment) {
             if (nextPoint && row == nextPoint.y) {
                 // Case A: entire comment on this line, start highlight s.x to e.x
                 if (currentHighlight == null && start.y == end.y){
-                    console.log('case A');
+                    // console.log('case A');
                     let seg0 = line.substring(0, start.x);
                     let seg1 = line.substring(start.x, end.x);
                     let seg2 = line.substring(end.x);
@@ -201,7 +201,7 @@ function CommentedTextBlock(root, text, comment) {
                 }
                 // Case B: start  highlight on this line at s.x, end on another
                 else if (currentHighlight == null){
-                    console.log('case B');
+                    // console.log('case B');
                     let seg0 = line.substring(0, start.x);
                     let seg1 = line.substring(start.x);
                     addText(seg0);
@@ -212,7 +212,7 @@ function CommentedTextBlock(root, text, comment) {
                 //      impossible, we'll do the entire line in case A
                 // Case C: started highlighting already, ending highlight at end.x
                 else { // start.y != end.y && already started highligting
-                    console.log('case C');
+                    // console.log('case C');
                     let seg0 = line.substring(0, end.x);
                     let seg1 = line.substring(end.x);
                     addText(seg0);

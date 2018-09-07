@@ -106,16 +106,25 @@ function MdxDebugEditor(root, mdx) {
     this._addCommentBtn = null;
     this._selectionDbg = null;
 
+    this._doUpdateTimeout = false;
+
     let _keypress = function(self) {
-        self._renderSelectionDbg();
-        if (self._timeout != null) {
-            clearTimeout(self._timeout);
-            self._timeout = null;
+        // Don't just render the selection here - we need the mdx to use the updated text value.
+        // self._renderSelectionDbg();
+        if (self._doUpdateTimeout){
+            if (self._timeout != null) {
+                clearTimeout(self._timeout);
+                self._timeout = null;
+            }
+            self._timeout = setTimeout(()=>{
+                self._updateDiff(true);
+                self._timeout = null;
+            }, 1000);
         }
-        self._timeout = setTimeout(()=>{
-            self._updateDiff(true);
-            self._timeout = null;
-        }, 1000);
+        else {
+            // slightly defer, just to let the UI update
+            setTimeout(()=>{self._updateDiff(true);}, 50);
+        }
     }
 
     let _initialize = function(self){
@@ -189,7 +198,6 @@ function MdxDebugEditor(root, mdx) {
     }
 
     this._updateComments = function() {
-        console.log(this);
         this._commentBlocks = [];
         this._commentBlocksRoot.empty();
         this._mdx.comments().map((c, index)=>{
@@ -216,8 +224,8 @@ function MdxDebugEditor(root, mdx) {
 
     this._renderSelectionDbg = function() {
         let selection = this._textEditor.getSelection();
-        console.log(selection);
-        this._selectionDbg.text("Selection:" + selection.start + ", " + selection.end);
+        let selectionPoints = this._mdx.selectionToPoints(selection);
+        this._selectionDbg.text("Selection:" + point_to_string(selectionPoints.start) + ", " + point_to_string(selectionPoints.end));
     }
 
     this._updateDiff = function(updateText) {
@@ -290,7 +298,6 @@ window.onload = function() {
 
     // The DiffPointsBlock doesn't know how to use the
     mdx = Mdx.import(testTextInitial000, testInitialComments000, null);
-    // mdx.comments().map(comment=>{console.log(comment);});
     dbgEditor = new MdxDebugEditor($('body'), mdx);
 };
 </script>

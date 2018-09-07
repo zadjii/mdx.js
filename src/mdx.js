@@ -46,6 +46,7 @@ function Mdx(mdxjson){
     }
 
     this.updateText = function (newText) {
+        if (newText == this._text) return;
         if (!this._updated){
             this._initialText = this._text;
             this._updated = true;
@@ -75,6 +76,36 @@ function Mdx(mdxjson){
             result.lastText = this._initialText;
         }
         return result;
+    }
+
+    // {start:int. end:int} -> {start:Point. end:Point}
+    this.selectionToPoints = function(selection){
+        // Using the current text value, translate character indicies to x,y coords
+        let startIndex = selection.start;
+        let endIndex = selection.end;
+        let current = {x:0,y:0};
+        let startPoint = {x:-1,y:-1};
+        let endPoint = {x:-1,y:-1};
+        for (var charIndex = 0; charIndex < this._text.length; charIndex++) {
+            let c = this._text[charIndex];
+            if (charIndex == startIndex){
+                startPoint.x = current.x;
+                startPoint.y = current.y;
+            }
+            if (charIndex == endIndex){
+                endPoint.x = current.x;
+                endPoint.y = current.y;
+            }
+            if (charIndex >= startIndex && charIndex >= endIndex) break;
+            if (c == '\n') {
+                current.x = 0;
+                current.y++;
+            }
+            else {
+                current.x++;
+            }
+        }
+        return {start:startPoint, end:endPoint};
     }
 }
 
