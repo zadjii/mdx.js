@@ -57,7 +57,7 @@ function CommentBlock(root, comment, editor) {
     this._textEdit = null;
     this.render = function(){
         this._baseDiv
-            .css('border-color', this._selected? "#ffff00"  : "#00000000")
+            .css('border-color', this._selected? "#ffff00"  : "#aaa")
         ;
         this._pointDiv
             .text(point_to_string(this._comment.start) + ", " + point_to_string(this._comment.end))
@@ -89,12 +89,14 @@ function CommentBlock(root, comment, editor) {
             ;
 
         self._baseDiv
+            .addClass("p-1")
+            .addClass("m-1")
             .append(self._textEdit)
             .append(self._pointDiv)
             .mouseup(()=>{_mouseup(self);})
             .css('border-width', "1px")
             .css('border-style', "solid")
-            .css('border-color', "#00000000")
+            .css('border-color', "#aaa")
             ;
     };
     _initialize(this);
@@ -185,8 +187,36 @@ function MdxDebugEditor(root, mdx) {
             .append(self._commentBlocksRoot)
             ;
 
-        self._importMdxBtn = $("<button>").appendTo(buttonsRow).text("Import...");
-        self._exportMdxBtn = $("<button>").appendTo(buttonsRow).text("Export...");
+        self._importMdxBtn = $("<button>")
+            .appendTo(buttonsRow)
+            .text("Import...")
+            .click(()=>{
+                // self._mdx = new Mdx(mdxjson);
+                // self._updateDiff();
+                console.log("import");
+            })
+            ;
+        self._exportMdxBtn = $("<button>")
+            .appendTo(buttonsRow)
+            .text("Export...")
+            .click(()=>{
+                let data = self._mdx.export(true);
+                console.log(data);
+                var blob = new Blob([JSON.stringify(data)], {type: "octet/stream"});
+                // var blob = new Blob([JSON.stringify(data)], {type: "text/plain"});
+                console.log(blob);
+                var a = document.createElement("a");
+                document.body.appendChild(a);
+                var url = window.URL.createObjectURL(blob);
+                a.href = url;
+                a.download = "index2.mdx";
+                // a.download = "index2.txt";
+                a.click();
+                console.log(a);
+                document.body.removeChild(a);
+            })
+            ;
+
         self._addCommentBtn = $("<button>").appendTo(buttonsRow).text("Add Comment");
         self._selectionDbg = $("<div>").appendTo(buttonsRow).text("");
         self._textEditor.mouseup(()=>{self._renderSelectionDbg();});

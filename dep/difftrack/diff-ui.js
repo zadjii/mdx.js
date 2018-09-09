@@ -94,26 +94,10 @@ function DiffPointsBlock(root, textA, textB, point_colors) {
     this._textB = textB;
     this._initial_point_colors = point_colors;
     let _initialize = function (self) {
-        // var diff_words = JsDiff.diffWords(textA, textB);
-        // var diff_words = JsDiff.diffWordsWithSpace(textA, textB);
-        // var diff_chars = JsDiff.diffChars(textA, textB);
-        // console.log(JsDiff.structuredPatch("", "", textA, textB, "", ""));
+
         var diff_dmp = diff_with_dmp(textA, textB);
-        // var diff_lines = JsDiff.diffLines(textA, textB, {newlineIsToken:true});
-        // var diff_lines = JsDiff.diffLines(textA, textB, false, true);
-        // console.log(diff_words);
-
-        // let final_point_colors = self._initial_point_colors.map(pc=>{return new PointColor(locate_point(pc.point, diff_words),  pc.color)});
-        let final_point_colors = [self._initial_point_colors.map(pc=>{return new PointColor(new Point(-1, -1), pc.color);})];
-
-        // let final_point_colors_by_chars = self._initial_point_colors.map(pc=>{return new PointColor(locate_point(pc.point, diff_chars),  pc.color)});
-        let final_point_colors_by_chars = [self._initial_point_colors.map(pc=>{return new PointColor(new Point(-1, -1), pc.color);})];
 
         let final_point_colors_by_dmp = self._initial_point_colors.map(pc=>{return new PointColor(locate_point(pc.point, diff_dmp),  pc.color)});
-        // let final_point_colors_by_lines = self._initial_point_colors.map(pc=>{return new PointColor(locate_point(pc.point, diff_lines),  pc.color)});
-
-        // console.log(final_point_colors);
-        // console.log(final_point_colors_by_chars);
 
         let table = $("<table>");
         self._root.append(table);
@@ -122,38 +106,26 @@ function DiffPointsBlock(root, textA, textB, point_colors) {
         header
             .append($("<th>").text("points"))
             .append($("<th>").text("initial text"))
-            // .append($("<th>").text("diff by words"))
-            // .append($("<th>").text("diff by chars"))
             .append($("<th>").text("diff by dmp"))
             ;
         let row = $("<tr>");
         table.append(row);
         let colA = $("<td>");
         let colB = $("<td>");
-        // let colC = $("<td>");
-        // let colD = $("<td>");
         let colE = $("<td>");
         row.append(colA);
         row.append(colB);
-        // row.append(colC);
-        // row.append(colD);
         row.append(colE);
         point_colors.map((pc,i)=>{
             colA.append(
                 $("<div>")
                     .css("background", pc.color)
                     .text(point_to_string(pc.point) + " -> \n"
-                          // + point_to_string(final_point_colors[i].point) + ", "
-                          // + point_to_string(final_point_colors_by_chars[i].point) + ", "
                           + point_to_string(final_point_colors_by_dmp[i].point)// + ", "
                           )
             );
         });
-        // let initial_pcs = points.map((p, index)=>{return new PointColor(p, colors[index]);});
-        // let final_pcs = finals.map((p, index)=>{return new PointColor(p, colors[index]);});
         let blockA = new TextBlock(colB, textA, self._initial_point_colors);
-        // let blockB = new TextBlock(colC, textB, final_point_colors);
-        // let blockC = new TextBlock(colD, textB, final_point_colors_by_chars);
         let blockD = new TextBlock(colE, textB, final_point_colors_by_dmp);
 
     };
