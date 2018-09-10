@@ -101,3 +101,14 @@ initialText() is the value at the last iteration
 text() is the current iteration's value.
 
 If you change the text, then the last iteration is the text when you loaded it.
+
+
+#### 9 sept 2018
+I don't think I like storing the mdx file as a json blob. That seems like it almost defeats the point
+maybe it could be
+``` md
+<!--
+{metadata:{}, comments:[]}
+-->
+{{text}}
+```

@@ -70,14 +70,22 @@ function Mdx(mdxjson){
         }
     }
 
+    // this.export = function (exportLast) {
+    //     let result = {text:this._text, comments:this._comments}
+    //     if (exportLast){
+    //         result.lastText = this._initialText;
+    //     }
+    //     return result;
+    // }
     this.export = function (exportLast) {
-        let result = {text:this._text, comments:this._comments}
-        if (exportLast){
-            result.lastText = this._initialText;
-        }
-        return result;
+        let metaObj = {comments:this._comments, metadata:this._metadata};
+        // let result = {text:this._text, comments:this._comments}
+        // if (exportLast){
+        //     result.lastText = this._initialText;
+        // }
+        let fileText = "<!--\n" + JSON.stringify(metaObj) + "\n-->\n" + this._text;
+        return fileText;
     }
-
     // {start:int. end:int} -> {start:Point. end:Point}
     this.selectionToPoints = function(selection){
         // Using the current text value, translate character indicies to x,y coords
@@ -109,10 +117,51 @@ function Mdx(mdxjson){
     }
 }
 
-Mdx.import = function(text, comments, lastText){
+Mdx.create = function(text, comments, metadata, lastText){
     let mdxjson = {text:text, comments:comments};
+    if (metadata){
+        mdxjson.metadata = metadata;
+    }
     if (lastText){
         mdxjson.lastText = lastText;
     }
     return new Mdx(mdxjson);
 }
+
+Mdx.import = function(fileText){
+    // Scan the file for an opening <!-- and a closing -->\n
+    // Include the \n in the closing search - we want the meta block to be
+    //  cleanly at the top of the file, with the contents starting on the next line.
+    let startTag = fileText.indexOf("<!--");
+    let endTag = fileText.indexOf("-->\n");
+
+    let text = null;
+    let metaObj = null;
+
+    if (startTag == -1 && endTag == -1){
+        text = fileText;
+        metaObj = {};
+        // neither tag exists, this is okay
+    }
+    else if (startTag == -1){
+        // No start tag but there was an end tag? that's invalid
+    }
+    else if (endTag == -1){
+        // start but no end tag? that's invalid
+    }
+    else {
+        // both tags, this is good
+        let metaText = fileText.substring(startTag+4, endTag);
+        let realText = fileText.substring(endTag+4);
+        metaObj = JSON.parse(metaText);
+        text = realText;
+    }
+    let mdxjson = metaObj;
+    mdxjson.text = text;
+    // let mdxjson = {text:text, comments:comments};
+    // if (lastText){
+    //     mdxjson.lastText = lastText;
+    // }
+    return new Mdx(mdxjson);
+}
+

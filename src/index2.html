@@ -102,6 +102,13 @@ function CommentBlock(root, comment, editor) {
     _initialize(this);
 }
 
+function ab2str(arraybuff) {
+    var decoder = new TextDecoder('utf-8');
+    var dataView = new DataView(arraybuff);
+    var decodedString = decoder.decode(dataView);
+    return decodedString;
+}
+
 function MdxDebugEditor(root, mdx) {
     this._root = root;
     this._mdx = mdx;
@@ -191,6 +198,28 @@ function MdxDebugEditor(root, mdx) {
             .appendTo(buttonsRow)
             .text("Import...")
             .click(()=>{
+
+                var fileIn = $("<input>")
+                    // .attr("multiple", true)
+                    .attr("type", "file")
+                    .change(function() {
+                        let fileList = this.files;
+                        let numFiles = fileList.length;
+                        for (var i = 0; i < numFiles; i++) {
+                            let file = fileList[i];
+                            let reader = new FileReader();
+                            reader.onload = function(event) {
+                                let file_contents = event.target.result;
+                                self._mdx = Mdx.import(ab2str(file_contents));
+                                self._textEditor.val(self._mdx.text());
+                                self._updateDiff();
+                            }
+                            reader.readAsArrayBuffer(file);
+                        }
+                    })
+                    ;
+                fileIn.click();
+
                 // self._mdx = new Mdx(mdxjson);
                 // self._updateDiff();
                 console.log("import");
@@ -202,7 +231,8 @@ function MdxDebugEditor(root, mdx) {
             .click(()=>{
                 let data = self._mdx.export(true);
                 console.log(data);
-                var blob = new Blob([JSON.stringify(data)], {type: "octet/stream"});
+                var blob = new Blob([data], {type: "octet/stream"});
+                // var blob = new Blob([JSON.stringify(data)], {type: "octet/stream"});
                 // var blob = new Blob([JSON.stringify(data)], {type: "text/plain"});
                 console.log(blob);
                 var a = document.createElement("a");
@@ -331,14 +361,7 @@ let testInitialComments000 = [
 let mdx = null;
 let dbgEditor = null;
 window.onload = function() {
-    // test_long_code();
-    // test003();
-    // test002_by_word();
-    // test_apple_tos();
-    // test000_by_word();
-
-    // The DiffPointsBlock doesn't know how to use the
-    mdx = Mdx.import(testTextInitial000, testInitialComments000, null);
+    mdx = Mdx.create(testTextInitial000, testInitialComments000, {title:"testTextInitial000"}, null);
     dbgEditor = new MdxDebugEditor($('body'), mdx);
 };
 </script>
