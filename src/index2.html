@@ -126,6 +126,8 @@ function MdxDebugEditor(root, mdx) {
     this._addCommentBtn = null;
     this._selectionDbg = null;
 
+    this._titleText = null;
+
     this._doUpdateTimeout = false;
 
     let _keypress = function(self) {
@@ -150,10 +152,12 @@ function MdxDebugEditor(root, mdx) {
     let _initialize = function(self){
         let container = $("<div>").addClass('p-4');//.addClass('container');
         self._root.append(container);
+        let titleRow = $("<div>").addClass('row').addClass('p-2');
         let buttonsRow = $("<div>").addClass('row').addClass('p-2');
         let r1 = $("<div>").addClass('row');
         let r2 = $("<div>").addClass('row');
         container
+            .append(titleRow)
             .append(buttonsRow)
             .append(r1)
             .append(r2)
@@ -196,6 +200,8 @@ function MdxDebugEditor(root, mdx) {
 
         self._importMdxBtn = $("<button>")
             .appendTo(buttonsRow)
+            .addClass('btn')
+            .addClass('mx-1')
             .text("Import...")
             .click(()=>{
 
@@ -212,6 +218,8 @@ function MdxDebugEditor(root, mdx) {
                                 let file_contents = event.target.result;
                                 self._mdx = Mdx.import(ab2str(file_contents));
                                 self._textEditor.val(self._mdx.text());
+                                self._titleText
+                                    .val(self._mdx.metadata('title')? self._mdx.metadata('title') : "Untitled");
                                 self._updateDiff();
                             }
                             reader.readAsArrayBuffer(file);
@@ -227,6 +235,8 @@ function MdxDebugEditor(root, mdx) {
             ;
         self._exportMdxBtn = $("<button>")
             .appendTo(buttonsRow)
+            .addClass('btn')
+            .addClass('mx-1')
             .text("Export...")
             .click(()=>{
                 let data = self._mdx.export(true);
@@ -239,7 +249,9 @@ function MdxDebugEditor(root, mdx) {
                 document.body.appendChild(a);
                 var url = window.URL.createObjectURL(blob);
                 a.href = url;
-                a.download = "index2.mdx";
+                let title = self._mdx.metadata('title')? self._mdx.metadata('title') : "Untitled";
+
+                a.download = title + ".mdx";
                 // a.download = "index2.txt";
                 a.click();
                 console.log(a);
@@ -247,9 +259,44 @@ function MdxDebugEditor(root, mdx) {
             })
             ;
 
-        self._addCommentBtn = $("<button>").appendTo(buttonsRow).text("Add Comment");
-        self._selectionDbg = $("<div>").appendTo(buttonsRow).text("");
+        self._addCommentBtn = $("<button>")
+            .appendTo(buttonsRow)
+            .addClass('btn')
+            .addClass('mx-1')
+            .text("Add Comment")
+            .click(()=>{
+                let selectionPoints = self.getSelection();
+
+                self._mdx.addComment(selectionPoints.start, selectionPoints.end, "Add a comment here", {});
+                self._updateComments();
+            })
+            ;
+
+        self._selectionDbg = $("<div>")
+            .appendTo(r1c1) //after _editor
+            .addClass('col-12')
+            .css('font-style', 'italic')
+            .text("")
+            ;
+
         self._textEditor.mouseup(()=>{self._renderSelectionDbg();});
+
+        self._titleText = $("<input>")
+            .appendTo(titleRow)
+            .css('font-size', 'xx-large')
+            .addClass('pl-1')
+            .val(self._mdx.metadata('title')? self._mdx.metadata('title') : "Untitled")
+            // .keydown(()=>{
+            //     self._mdx.metadata('title', self._titleText.val());
+            // })
+            .focusout(()=>{
+                console.log("focusout");
+                if (self._titleText.val() == "")
+                    self._titleText.val("Untitled");
+                self._mdx.metadata('title', self._titleText.val());
+
+            })
+            ;
 
         self._updateDiff(false);
     };
@@ -291,6 +338,13 @@ function MdxDebugEditor(root, mdx) {
         else {
             new CommentedTextBlock(this._commentsPointsBlock, newText, {start:{x:-1,y:-1}, end:{x:-1,y:-1}});
         }
+    }
+
+    // () -> {start:point, end:point}
+    this.getSelection = function() {
+        let selection = this._textEditor.getSelection();
+        let selectionPoints = this._mdx.selectionToPoints(selection);
+        return selectionPoints;
     }
 
     this._renderSelectionDbg = function() {

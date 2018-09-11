@@ -32,6 +32,36 @@ function Mdx(mdxjson){
     this.text = function () {
         return this._text;
     }
+    this.metadata = function (key, value) {
+        if (!this._metadata){
+            if (!value){
+                return null;
+            }
+            else {
+                if (key) {
+                    this._metadata = {};
+                    this._metadata[key] = value;
+                    return value; // TODO: should this return anything?
+                }
+                else {
+                    throw new Exception("You need to actually provide a key for this value");
+                }
+            }
+        }
+        else {
+            if (!key && !value) {
+                return this._metadata;
+            }
+            else if (!value) {
+                return this._metadata[key];
+            }
+            else {
+                this._metadata[key] = value;
+                return value;
+            }
+        }
+        // return this._metadata;
+    }
     this.lastText = function () {
         return this._initialText;
     }
