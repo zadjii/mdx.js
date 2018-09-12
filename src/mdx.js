@@ -6,7 +6,7 @@ function Mdx(mdxjson){
     this._comments = null;
     this._lastComments = null;
     this._updated = false;
-    this._metadata = null;
+    this._metadata = {};
 
     if (mdxjson){
         if (mdxjson.text){
@@ -100,19 +100,15 @@ function Mdx(mdxjson){
         }
     }
 
-    // this.export = function (exportLast) {
-    //     let result = {text:this._text, comments:this._comments}
-    //     if (exportLast){
-    //         result.lastText = this._initialText;
-    //     }
-    //     return result;
-    // }
-    this.export = function (exportLast) {
-        let metaObj = {comments:this._comments, metadata:this._metadata};
-        // let result = {text:this._text, comments:this._comments}
+    this.toJSON = function () {
+        let result = {text:this._text, comments:this._comments, metadata:this._metadata};
         // if (exportLast){
         //     result.lastText = this._initialText;
         // }
+        return result;
+    }
+    this.export = function (exportLast) {
+        let metaObj = {comments:this._comments, metadata:this._metadata};
         let fileText = "<!--\n" + JSON.stringify(metaObj) + "\n-->\n" + this._text;
         return fileText;
     }
@@ -149,10 +145,10 @@ function Mdx(mdxjson){
 
 Mdx.create = function(text, comments, metadata, lastText){
     let mdxjson = {text:text, comments:comments};
-    if (metadata){
+    if (metadata) {
         mdxjson.metadata = metadata;
     }
-    if (lastText){
+    if (lastText) {
         mdxjson.lastText = lastText;
     }
     return new Mdx(mdxjson);
@@ -168,16 +164,20 @@ Mdx.import = function(fileText){
     let text = null;
     let metaObj = null;
 
-    if (startTag == -1 && endTag == -1){
+    // TODO we should only look for the start tag at the very START of the doc.
+    //      If it's not at the very start, we don't care.
+    if (startTag == -1 && endTag == -1) {
         text = fileText;
         metaObj = {};
         // neither tag exists, this is okay
     }
-    else if (startTag == -1){
+    else if (startTag == -1) {
         // No start tag but there was an end tag? that's invalid
+        throw "Parse error while importing mdx file: found ending header tag without a starting tag '<!--'";
     }
-    else if (endTag == -1){
+    else if (endTag == -1) {
         // start but no end tag? that's invalid
+        throw "Parse error while importing mdx file: could not find closing header tag '-->\\n'";
     }
     else {
         // both tags, this is good
