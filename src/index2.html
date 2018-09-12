@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>mdx test 1</title>
+    <!-- <style type="text/css">
+        table{
+            width: 100%;
+        }
+        td {
+            padding-right: 2em;
+        }
+        span {
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style> -->
+    <link rel="stylesheet" href="../dep/bootstrap.min.css">
+
+</head>
+<body>
+
+<script src="..\dep\jquery-3.2.1.min.js"></script>
+<script src="..\dep\jquery-fieldselection.min.js"></script>
+
+<script src="..\dep\difftrack\text-diff.js"></script>
+<script src="..\dep\difftrack\difftrack.js"></script>
+<script src="..\dep\difftrack\diff-ui.js"></script>
+<script src="..\src\mdx.js"></script>
+<script defer>
+
+let colorPalette = [
+    "#aaaaff",
+    "#8888ff",
+    "#fa4aaa",
+    "#f808aa",
+    "#ffffaa",
+    "#ffff88",
+    "#4af8a8",
+    "#888888",
+    "#ff8888",
+    "#88ff88",
+    "#f8c8a8",
+    "#ff88ff",
+    "#88ffff",
+    "#aa48fa",
+    "#f84f4f",
+];
+
+function CommentBlock(root, comment, editor) {
+    this._root = root;
+    this._comment = comment;
+    this._editor = editor;
+    this._baseDiv = null;
+    this._selected = false;
+    this._pointDiv = null;
+    this._textEdit = null;
+    this.render = function(){
+        this._baseDiv
+            .css('border-color', this._selected? "#ffff00"  : "#aaa")
+        ;
+        this._pointDiv
+            .text(point_to_string(this._comment.start) + ", " + point_to_string(this._comment.end))
+            ;
+        this._textEdit.val(this._comment.text);
+    }
+    this.selected = function(){return this._selected;}
+    this.select = function(){this._selected=true; this.render();}
+    this.deselect = function(){this._selected=false; this.render();}
+
+    let _mouseup = function(self) {
+        self._editor.selectNewComment(self);
+    };
+    let _keypress = function(self) {
+        self._comment.text = self._textEdit.val();
+    };
+
+    let _initialize = function(self){
+        self._baseDiv = $("<div>");
+        self._root.append(self._baseDiv);
+        self._pointDiv = $("<div>")
+            .css('font-size', 'small')
+            .text(point_to_string(self._comment.start) + ", " + point_to_string(self._comment.end))
+            ;
+        self._textEdit = $("<input>")
+            .val(self._comment.text)
+            .keydown((e)=>{_keypress(self);})
+            .keyup((e)=>{_keypress(self);})
+            ;
+
+        self._baseDiv
+            .addClass("p-1")
+            .addClass("m-1")
+            .append(self._textEdit)
+            .append(self._pointDiv)
+            .mouseup(()=>{_mouseup(self);})
+            .css('border-width', "1px")
+            .css('border-style', "solid")
+            .css('border-color', "#aaa")
+            ;
+    };
+    _initialize(this);
+}
+
+function ab2str(arraybuff) {
+    var decoder = new TextDecoder('utf-8');
+    var dataView = new DataView(arraybuff);
+    var decodedString = decoder.decode(dataView);
+    return decodedString;
+}
+
+function MdxDebugEditor(root, mdx) {
+    this._root = root;
+    this._mdx = mdx;
+    // this._lastText = mdx.text();
+    this._textEditor = null;
+    this._prettyDiffBlock = null;
+    this._commentsPointsBlock = null;
+    this._timeout = null;
+    this._selectedComment = -1;
+    this._commentBlocksRoot = null;
+    this._commentBlocks = [];
+
+    this._importMdxBtn = null;
+    this._exportMdxBtn = null;
+    this._addCommentBtn = null;
+    this._selectionDbg = null;
+
+    this._titleText = null;
+
+    this._doUpdateTimeout = false;
+
+    let _keypress = function(self) {
+        // Don't just render the selection here - we need the mdx to use the updated text value.
+        // self._renderSelectionDbg();
+        if (self._doUpdateTimeout){
+            if (self._timeout != null) {
+                clearTimeout(self._timeout);
+                self._timeout = null;
+            }
+            self._timeout = setTimeout(()=>{
+                self._updateDiff(true);
+                self._timeout = null;
+            }, 1000);
+        }
+        else {
+            // slightly defer, just to let the UI update
+            setTimeout(()=>{self._updateDiff(true);}, 50);
+        }
+    }
+
+    let _initialize = function(self){
+        let container = $("<div>").addClass('p-4');//.addClass('container');
+        self._root.append(container);
+        let titleRow = $("<div>").addClass('row').addClass('p-2');
+        let buttonsRow = $("<div>").addClass('row').addClass('p-2');
+        let r1 = $("<div>").addClass('row');
+        let r2 = $("<div>").addClass('row');
+        container
+            .append(titleRow)
+            .append(buttonsRow)
+            .append(r1)
+            .append(r2)
+            ;
+        let r1c1 = $("<div>").addClass('col-8');
+        let r1c2 = $("<div>").addClass('col-4');
+        let r2c1 = $("<div>").addClass('col-6');
+        let r2c2 = $("<div>").addClass('col-6');
+        r1
+            .append(r1c1)
+            .append(r1c2)
+            ;
+        r2
+            .append(r2c1)
+            .append(r2c2)
+            ;
+
+        self._textEditor = $("<textarea>");
+        self._textEditor
+            .css('width', '100%')
+            .val(mdx.text())
+            ;
+
+        self._textEditor.keydown((e)=>{_keypress(self);});
+        self._textEditor.keyup((e)=>{_keypress(self);});
+
+        r1c1.append(self._textEditor);
+
+        self._commentsPointsBlock = $("<div>");
+        r2c1.append(self._commentsPointsBlock);
+
+        self._prettyDiffBlock = $("<div>");
+        r2c2.append(self._prettyDiffBlock);
+
+        self._commentBlocksRoot = $("<div>");
+        r1c2
+            .append($("<h3>").text("Comments"))
+            .append(self._commentBlocksRoot)
+            ;
+
+        self._importMdxBtn = $("<button>")
+            .appendTo(buttonsRow)
+            .addClass('btn')
+            .addClass('mx-1')
+            .text("Import...")
+            .click(()=>{
+
+                var fileIn = $("<input>")
+                    // .attr("multiple", true)
+                    .attr("type", "file")
+                    .change(function() {
+                        let fileList = this.files;
+                        let numFiles = fileList.length;
+                        for (var i = 0; i < numFiles; i++) {
+                            let file = fileList[i];
+                            let reader = new FileReader();
+                            reader.onload = function(event) {
+                                let file_contents = event.target.result;
+                                self._mdx = Mdx.import(ab2str(file_contents));
+                                self._textEditor.val(self._mdx.text());
+                                self._titleText
+                                    .val(self._mdx.metadata('title')? self._mdx.metadata('title') : "Untitled");
+                                self._updateDiff();
+                            }
+                            reader.readAsArrayBuffer(file);
+                        }
+                    })
+                    ;
+                fileIn.click();
+
+                // self._mdx = new Mdx(mdxjson);
+                // self._updateDiff();
+                console.log("import");
+            })
+            ;
+        self._exportMdxBtn = $("<button>")
+            .appendTo(buttonsRow)
+            .addClass('btn')
+            .addClass('mx-1')
+            .text("Export...")
+            .click(()=>{
+                let data = self._mdx.export(true);
+                console.log(data);
+                var blob = new Blob([data], {type: "octet/stream"});
+                // var blob = new Blob([JSON.stringify(data)], {type: "octet/stream"});
+                // var blob = new Blob([JSON.stringify(data)], {type: "text/plain"});
+                console.log(blob);
+                var a = document.createElement("a");
+                document.body.appendChild(a);
+                var url = window.URL.createObjectURL(blob);
+                a.href = url;
+                let title = self._mdx.metadata('title')? self._mdx.metadata('title') : "Untitled";
+
+                a.download = title + ".mdx";
+                // a.download = "index2.txt";
+                a.click();
+                console.log(a);
+                document.body.removeChild(a);
+            })
+            ;
+
+        self._addCommentBtn = $("<button>")
+            .appendTo(buttonsRow)
+            .addClass('btn')
+            .addClass('mx-1')
+            .text("Add Comment")
+            .click(()=>{
+                let selectionPoints = self.getSelection();
+
+                self._mdx.addComment(selectionPoints.start, selectionPoints.end, "Add a comment here", {});
+                self._updateComments();
+            })
+            ;
+
+        self._selectionDbg = $("<div>")
+            .appendTo(r1c1) //after _editor
+            .addClass('col-12')
+            .css('font-style', 'italic')
+            .text("")
+            ;
+
+        self._textEditor.mouseup(()=>{self._renderSelectionDbg();});
+
+        self._titleText = $("<input>")
+            .appendTo(titleRow)
+            .css('font-size', 'xx-large')
+            .addClass('pl-1')
+            .val(self._mdx.metadata('title')? self._mdx.metadata('title') : "Untitled")
+            // .keydown(()=>{
+            //     self._mdx.metadata('title', self._titleText.val());
+            // })
+            .focusout(()=>{
+                console.log("focusout");
+                if (self._titleText.val() == "")
+                    self._titleText.val("Untitled");
+                self._mdx.metadata('title', self._titleText.val());
+
+            })
+            ;
+
+        self._updateDiff(false);
+    };
+    this.textVal = function() {
+        return this._textEditor.val();
+    }
+    this.selectNewComment = function(comment){
+        this._commentBlocks.map(b=>{b.deselect();});
+        comment.select();
+        this._selectedComment = -1;
+        this._commentBlocks.map((b, index)=>{
+            if (b.selected()){
+                this._selectedComment = index;
+            }
+        });
+        this._updateCommenttedText();
+    }
+
+    this._updateComments = function() {
+        this._commentBlocks = [];
+        this._commentBlocksRoot.empty();
+        this._mdx.comments().map((c, index)=>{
+            let b = new CommentBlock(this._commentBlocksRoot, c, this);
+            if (index == this._selectedComment){
+                b.select();
+            }
+            this._commentBlocks.push(b);
+            b.render();
+        });
+
+    }
+
+    this._updateCommenttedText = function() {
+        let newText = this.textVal();
+        this._commentsPointsBlock.empty();
+        if (this._selectedComment >= 0){
+            new CommentedTextBlock(this._commentsPointsBlock, newText, this._mdx.comments()[this._selectedComment]);
+        }
+        else {
+            new CommentedTextBlock(this._commentsPointsBlock, newText, {start:{x:-1,y:-1}, end:{x:-1,y:-1}});
+        }
+    }
+
+    // () -> {start:point, end:point}
+    this.getSelection = function() {
+        let selection = this._textEditor.getSelection();
+        let selectionPoints = this._mdx.selectionToPoints(selection);
+        return selectionPoints;
+    }
+
+    this._renderSelectionDbg = function() {
+        let selection = this._textEditor.getSelection();
+        let selectionPoints = this._mdx.selectionToPoints(selection);
+        this._selectionDbg.text("Selection:" + point_to_string(selectionPoints.start) + ", " + point_to_string(selectionPoints.end));
+    }
+
+    this._updateDiff = function(updateText) {
+        let newText = this.textVal();
+
+        if (updateText)
+            this._mdx.updateText(newText);
+
+        this._prettyDiffBlock.empty();
+
+        new SingleDiffBlock(this._prettyDiffBlock, this._mdx.lastText(), newText);
+
+        this._updateComments();
+        this._updateCommenttedText();
+        this._renderSelectionDbg();
+        let numLines = newText.split("\n").length;
+        this._textEditor.css('height', (numLines * 1.75) + "rem");
+    }
+
+    _initialize(this);
+}
+
+let testTextInitial000 =
+`# Hello World
+This is a _very_ simple markdown document.
+
+It has *almost* no formatting.
+1. however,
+1. we do have this
+1. pointless, numbered
+1. list of items.
+
+Have fun!
+`
+let testInitialComments000 = [
+    {start:{x:2, y:0}, end:{x:6, y:0}, text:"Hello"},
+    {start:{x:0, y:9}, end:{x:3, y:9}, text:"Have"},
+    {start:{x:10, y:1}, end:{x:15, y:1}, text:"_very_"},
+];
+
+// let testTextFinal000 =
+// `# Why Hello There!
+// This is a _pretty_ simple markdown document.
+
+// It has *almost* no formatting.
+// * however,
+// * we do have this
+// * bulleted, unordered
+// * list of items.
+
+// Have fun!
+
+// ## here's another paragraph
+
+// You know, for testing and stuff
+// `
+// let testFinalComments000 = [
+//     {start:{x:6, y:0}, end:{x:10, y:0}, text:"Hello"},
+//     {start:{x:0, y:9}, end:{x:3, y:9}, text:"Have"},
+//     {start:{x:10, y:1}, end:{x:17, y:1}, text:"_very_"},
+// ];
+let mdx = null;
+let dbgEditor = null;
+window.onload = function() {
+    mdx = Mdx.create(testTextInitial000, testInitialComments000, {title:"testTextInitial000"}, null);
+    dbgEditor = new MdxDebugEditor($('body'), mdx);
+};
+</script>
+</body>
+</html>
